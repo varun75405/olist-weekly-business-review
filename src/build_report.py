@@ -359,18 +359,19 @@ def build_pdf(query_results: dict, dq_results: list = None, chart_paths: dict = 
     story.append(Paragraph("1. Data Quality Check Results (Raw Table Evaluation)", styles["ReportSectionTitle"]))
     story.append(Paragraph(
         "Source data quality checks run against raw tables prior to staging and mart transformations. "
-        "Mandatory checks (HARD FAIL) abort the pipeline if defects are detected, preventing corrupted data from entering analytics.",
+        "In default strict alarm mode (HARD FAIL), any check detecting defects halts execution immediately. "
+        "Running with <code>--allow-dq-exceptions</code> permits downstream analytics while preserving documented exceptions in the audit ledger.",
         styles["ReportBody"]
     ))
 
-    dq_table_data = [["Check File", "Description", "Failing Rows", "Severity", "Audit Status"]]
+    dq_table_data = [["Check File", "Description", "Failing Rows", "Default Severity", "Audit Status"]]
     for r in dq_results:
-        sev = "HARD FAIL" if r["is_hard_fail"] else "SOFT EXCEPTION"
+        sev = "HARD FAIL" if r["is_hard_fail"] else "HARD FAIL (Default)"
         dq_table_data.append([
             r["check_name"], r["description"],
             f"{r['failing_rows']:,}", sev, r["status"]
         ])
-    story.append(make_table(dq_table_data, col_widths=[3.8*cm, 7.2*cm, 2.3*cm, 2.7*cm, 2.0*cm]))
+    story.append(make_table(dq_table_data, col_widths=[3.8*cm, 7.0*cm, 2.3*cm, 3.1*cm, 1.8*cm]))
     story.append(Spacer(1, 0.18*cm))
 
     story.append(Paragraph("2. Empirical Payment Reconciliation Analysis (DQ-03)", styles["ReportSectionTitle"]))
@@ -396,11 +397,11 @@ def build_pdf(query_results: dict, dq_results: list = None, chart_paths: dict = 
     story.append(Paragraph("3. Data Quality Policies & Anomaly Treatment", styles["ReportSectionTitle"]))
     policies = [
         ("<b>DQ-01 (Null / Duplicate Order IDs)</b>: <i>Hard Failure</i>. An order_id must uniquely identify each transaction. 0 duplicate or null order IDs were found across all 99,441 raw order rows."),
-        ("<b>DQ-02 (Delivery Timestamp Precedence)</b>: <i>Soft Exception</i>. Validates delivery timestamp >= purchase timestamp. 0 inverted delivery records were detected."),
-        (f"<b>DQ-03 (Payment Reconciliation Policy)</b>: <i>Documented Exception</i>. Of the {pay_diff_05_cnt:,} discrepancies > R$0.05, 246 involve credit card payments where total payments exceed or fall short of item+freight totals (average diff +11.81 BRL), with 7 debit card orders and 7 combined credit card/voucher orders. Because source tables do not itemize external fees or discounts, records are retained intact without artificial adjustment."),
+        ("<b>DQ-02 (Delivery Timestamp Precedence)</b>: <i>Hard Failure (Default)</i>. Validates delivery timestamp >= purchase timestamp. 0 inverted delivery records were detected."),
+        (f"<b>DQ-03 (Payment Reconciliation Policy)</b>: <i>Hard Failure (Default) / Documented Exception</i>. Detects {pay_diff_05_cnt:,} discrepancies > R$0.05 (246 credit card, avg diff +11.81 BRL; 7 debit; 7 voucher/card). Halts pipeline by default; running with <code>--allow-dq-exceptions</code> or <code>STRICT_DQ=0</code> allows report generation while auditing all records intact."),
         ("<b>DQ-04 (Customer Referential Integrity)</b>: <i>Hard Failure</i>. Ensures every raw order maps to a valid customer in raw_customers. 0 orphaned orders detected."),
-        ("<b>DQ-05 (Review Score Range Validation)</b>: <i>Soft Verification</i>. Confirms review scores are strictly integers between 1 and 5. 0 invalid scores found in raw reviews."),
-        ("<b>DQ-06 (Order Item Referential & Price Integrity)</b>: <i>Soft Verification</i>. Confirms line items reference valid orders and prices are positive. 0 orphaned or negative price rows detected."),
+        ("<b>DQ-05 (Review Score Range Validation)</b>: <i>Hard Failure (Default)</i>. Confirms review scores are strictly integers between 1 and 5. 0 invalid scores found in raw reviews."),
+        ("<b>DQ-06 (Order Item Referential & Price Integrity)</b>: <i>Hard Failure (Default)</i>. Confirms line items reference valid orders and prices are positive. 0 orphaned or negative price rows detected."),
     ]
     for p in policies:
         story.append(Paragraph(f"• {p}", styles["ReportBullet"]))
