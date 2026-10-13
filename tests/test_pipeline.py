@@ -61,6 +61,12 @@ class TestDataQualitySuite:
             with pytest.raises(DataQualityHardFailure, match="PIPELINE HALTED"):
                 run_quality_checks()
 
+    def test_strict_dq_halts_on_reconciliation_exceptions(self):
+        """In strict mode, pipeline halts on dq_03 (260 payment exceptions)."""
+        from src.quality_checks import run_quality_checks, DataQualityHardFailure
+        with pytest.raises(DataQualityHardFailure, match="dq_03_payment_reconciliation"):
+            run_quality_checks(strict=True)
+
     def test_dq_checks_run_against_raw_tables(self):
         from src.quality_checks import run_quality_checks
         results = run_quality_checks()

@@ -92,7 +92,7 @@ olist-weekly-business-review/
 ├── tests/
 │   ├── __init__.py
 │   ├── conftest.py           # Synthetic fixtures for unit testing
-│   └── test_pipeline.py      # 23 automated pytest tests
+│   └── test_pipeline.py      # 24 automated pytest tests
 ├── charts/
 │   ├── chart1_monthly_revenue.png
 │   ├── chart2_top_categories.png
@@ -189,6 +189,13 @@ python pipeline.py --skip-ingest
 python pipeline.py --only-report
 ```
 
+### Strict Data Quality Mode (Assignment Alarm Mode)
+In compliance with the assignment requirement that the pipeline stop with an error when a check fails, the `--strict-dq` flag (or `STRICT_DQ=1` environment variable) causes any check with non-zero failing rows to halt the pipeline immediately with `DataQualityHardFailure`:
+```bash
+python pipeline.py --strict-dq
+```
+*Note: In strict mode, the pipeline halts during Stage 2 because `dq_03_payment_reconciliation` flags 260 empirical payment discrepancies present in the raw Kaggle data. Standard mode documents these exceptions in `analytics.dq_audit` and report Page 2 while allowing downstream analytics to proceed.*
+
 ---
 
 ## 7. Running Automated Tests
@@ -198,9 +205,9 @@ Run the complete test suite with `pytest`:
 pytest tests -v
 ```
 
-The automated test suite (`tests/test_pipeline.py`) contains **23 end-to-end and unit tests** across 5 test classes:
+The automated test suite (`tests/test_pipeline.py`) contains **24 end-to-end and unit tests** across 5 test classes:
 1. `TestValidation`: Missing data directory handling, missing raw CSV files detection, schema missing-columns verification, and valid dataset acceptance.
-2. `TestDataQualitySuite`: Missing SQL check handling, invalid SQL syntax error trap, hard-failure pipeline halting enforcement, and execution of the full 6-rule DQ suite against raw tables.
+2. `TestDataQualitySuite`: Missing SQL check handling, invalid SQL syntax error trap, hard-failure pipeline halting enforcement, strict-mode alarm halt on payment reconciliation exceptions, and execution of the full 6-rule DQ suite against raw tables.
 3. `TestMartGrainAndFanOut`: Exactly 1 row per order in `analytics.orders_mart`, primary key non-null enforcement, and mathematical proof of zero revenue fan-out (`|mart_revenue - staging_revenue| < 0.01 BRL`).
 4. `TestAnalyticalSQLQueries`: File existence checks, consecutive monthly revenue calendar continuity (Q1), top-3 categories per customer state (Q2), dedicated total delivered revenue top-15 categories across all states (Q2b for Chart 2), 7-day rolling daily order volume with zero-order date filling (Q3), repeat purchase rate using persistent `customer_unique_id` (Q4), delivery delay correlation across review scores (Q5), MoM growth rounding consistency (ROUND_HALF_UP), and Q4 date-filter enforcement (verifying Q4 output matches date-bounded inline SQL).
 5. `TestMetricConsistencyAndReportValidation`: Cross-layer mathematical consistency of the North Star Metric (91.89% on-time delivery rate), consistency of customer repeat purchase rate (3.06% within Sep 2016 – Aug 2018), and strict rejection of missing query results in PDF compilation.
@@ -275,5 +282,5 @@ The generated PDF (`reports/olist_weekly_business_review.pdf`) is strictly 5 pag
 
 The pipeline includes an Airflow DAG in `dags/olist_wbr_dag.py`:
 - **DAG ID**: `olist_weekly_business_review`
-- **Schedule**: Weekly (`0 6 * * 1` — every Monday at 06:00 UTC)
+- **Schedule**: Daily (`0 6 * * *` — every day at 06:00 UTC, meeting Part A bonus requirement)
 - **Task Sequence**: `start >> validate_and_ingest_raw >> run_raw_data_quality_checks >> staging_and_mart_transform >> execute_analytical_queries >> generate_visualizations >> compile_pdf_report >> end`

@@ -25,7 +25,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("pipeline")
 
-def run_pipeline(skip_ingest=False, skip_checks=False, only_report=False):
+def run_pipeline(skip_ingest=False, skip_checks=False, only_report=False, strict_dq=False):
     start_time = time.time()
     logger.info("=" * 65)
     logger.info("  Olist Weekly Business Review — Production Pipeline")
@@ -48,7 +48,7 @@ def run_pipeline(skip_ingest=False, skip_checks=False, only_report=False):
         if not skip_checks:
             from src.quality_checks import run_quality_checks
             try:
-                dq_results = run_quality_checks()
+                dq_results = run_quality_checks(strict=strict_dq)
             except Exception as e:
                 logger.error(f"PIPELINE TERMINATED AT STAGE 2: {str(e)}")
                 sys.exit(1)
@@ -103,9 +103,12 @@ if __name__ == "__main__":
                         help="Skip DQ checks")
     parser.add_argument("--only-report", action="store_true",
                         help="Only regenerate charts and PDF report")
+    parser.add_argument("--strict-dq", action="store_true",
+                        help="Strict DQ mode: halt pipeline if ANY DQ check has failing rows (e.g. assignment alarm)")
     args = parser.parse_args()
     run_pipeline(
         skip_ingest=args.skip_ingest,
         skip_checks=args.skip_checks,
-        only_report=args.only_report
+        only_report=args.only_report,
+        strict_dq=args.strict_dq
     )

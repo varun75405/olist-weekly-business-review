@@ -86,19 +86,33 @@ def log_to_audit(check_name, description, is_hard_fail, failing_rows, sample_ids
             "status": status
         })
 
-def run_quality_checks():
+def run_quality_checks(strict: bool = None):
     """
     Executes all source-level data quality checks on raw tables before staging/mart.
-    Halts the pipeline immediately if any check file is missing, errors, or fails a hard check.
+    Halts the pipeline immediately if any check file is missing or errors out.
+    
+    Failure Policy:
+      - By default (strict=False or STRICT_DQ=0), structural integrity checks (dq_01, dq_04)
+        hard-fail and halt the pipeline immediately, while empirical business-anomaly checks
+        (dq_03 payment reconciliation with 260 real-world exceptions) log warnings, record full
+        audits, and allow pipeline continuation with documented exception status.
+      - In strict mode (strict=True or STRICT_DQ=1/true), ANY check with failing_rows > 0 halts
+        the pipeline immediately with DataQualityHardFailure, fulfilling the strictest interpretation
+        of the assignment requirement that the pipeline stop with an error on any DQ failure.
     """
-    logger.info("--- Starting Data Quality Validation Suite (Raw Tables) ---")
+    import os
+    if strict is None:
+        strict = os.getenv("STRICT_DQ", "0").lower() in ("1", "true", "yes")
+
+    logger.info(f"--- Starting Data Quality Validation Suite (Raw Tables) [strict={strict}] ---")
     ensure_audit_table()
     results = []
 
-    for check_name, description, is_hard_fail in DQ_CHECKS:
+    for check_name, description, default_hard_fail in DQ_CHECKS:
         sql_path = SQL_DIR / f"{check_name}.sql"
         start = time.time()
         
+        is_hard_fail = True if strict else default_hard_fail
         failing_rows, sample_ids = run_single_check(check_name, sql_path)
         duration = time.time() - start
 

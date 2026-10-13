@@ -113,7 +113,7 @@ if AIRFLOW_AVAILABLE:
         "olist_weekly_business_review",
         default_args=default_args,
         description="Weekly Business Review ELT Pipeline for Olist Marketplace",
-        schedule_interval="0 6 * * 1",  # Every Monday at 06:00 UTC
+        schedule_interval="0 6 * * *",  # Daily at 06:00 UTC
         catchup=False,
         tags=["olist", "wbr", "analytics", "elt"],
     )
