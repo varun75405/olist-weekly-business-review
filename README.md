@@ -238,11 +238,11 @@ All data quality results are audited in `analytics.dq_audit`:
 | Check File | Description | Severity | Treatment Policy |
 |---|---|---|---|
 | `dq_01_order_id.sql` | Null or duplicate order IDs | **HARD FAIL** | Halts pipeline immediately if duplicates or nulls occur. |
-| `dq_02_delivery_dates.sql` | Delivery timestamp < Purchase timestamp | **SOFT (EXCEPTION)** | Preserved in mart with actual timestamps; filtered in delivery KPI queries. |
-| `dq_03_payment_reconciliation.sql` | Payment total vs (Item price + Freight) | **SOFT (EXCEPTION)** | At the SQL file's >R$0.05 threshold: 260 orders (246 credit card, 7 debit card, 7 credit card+voucher). A tighter >R$0.01 threshold detects 303 orders. Source data lacks fee/discount itemization; all records retained intact. |
+| `dq_02_delivery_dates.sql` | Delivery timestamp < Purchase timestamp | **HARD FAIL (Default)** | In strict alarm mode (default), halts if inverted timestamps occur (0 detected). Preserved in mart with actual timestamps; filtered in delivery KPI queries. |
+| `dq_03_payment_reconciliation.sql` | Payment total vs (Item price + Freight) | **HARD FAIL (Default)** | At the SQL file's >R$0.05 threshold, flags 260 orders (246 credit card, 7 debit card, 7 credit card+voucher; tighter >R$0.01 detects 303). Causes pipeline failure by default when failing rows are detected. Passing `--allow-dq-exceptions` or setting `STRICT_DQ=0` permits the pipeline to continue while preserving the full audit trail in `analytics.dq_audit` and report Page 2. Source data lacks external fee/discount itemization; all records retained intact. |
 | `dq_04_customer_integrity.sql` | Missing customer FK reference | **HARD FAIL** | Halts pipeline immediately if orphaned orders exist. |
-| `dq_05_review_scores.sql` | Review scores outside 1–5 range | **SOFT** | Staging layer enforces `BETWEEN 1 AND 5`; verified 0 defects. |
-| `dq_06_order_item_integrity.sql` | Orphaned items / Negative prices | **SOFT** | Verified 0 defects. |
+| `dq_05_review_scores.sql` | Review scores outside 1–5 range | **HARD FAIL (Default)** | In strict alarm mode (default), halts if invalid scores occur (0 detected). Staging layer enforces `BETWEEN 1 AND 5`; verified 0 defects. |
+| `dq_06_order_item_integrity.sql` | Orphaned items / Negative prices | **HARD FAIL (Default)** | In strict alarm mode (default), halts if invalid items occur (0 detected). Verified 0 defects. |
 
 ---
 
