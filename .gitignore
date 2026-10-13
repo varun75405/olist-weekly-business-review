@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+data/*.csv
+!data/.gitkeep
+.venv/
+*.log
+reports/rendered_pages/
+reports/rendered_pages_final/
