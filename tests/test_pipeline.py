@@ -69,7 +69,7 @@ class TestDataQualitySuite:
 
     def test_dq_checks_run_against_raw_tables(self):
         from src.quality_checks import run_quality_checks
-        results = run_quality_checks()
+        results = run_quality_checks(strict=False)
         assert isinstance(results, list)
         assert len(results) == 6
         check_names = [r["check_name"] for r in results]

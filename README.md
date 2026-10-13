@@ -172,29 +172,28 @@ DATA_DIR=data
 
 ## 6. Running the Pipeline
 
-### Full End-to-End Pipeline
-Executes validation, raw ingestion, staging, mart transformation, data quality checks, SQL queries, chart generation, and PDF compilation:
+### Full End-to-End Pipeline (Strict Alarm Mode — Default)
+In strict compliance with the assignment requirement that the pipeline stop with an error when a data quality check fails, `pipeline.py` runs in **strict alarm mode by default** (`strict=True`):
 ```bash
 python pipeline.py
 ```
+*Expected Behavior on Kaggle Data:* The pipeline halts at Stage 2 with `DataQualityHardFailure` because `dq_03_payment_reconciliation` flags 260 empirical payment discrepancies present in the raw Kaggle dataset.
+
+### Generating Reports (Documented Exceptions Mode)
+To allow downstream transformation, chart generation, and PDF report compilation while preserving the 260 payment discrepancies in `analytics.dq_audit` and report Page 2, pass `--allow-dq-exceptions` (or set `STRICT_DQ=0`):
+```bash
+python pipeline.py --allow-dq-exceptions
+```
 
 ### Fast Run (Skipping Ingestion)
-If CSVs are already loaded into PostgreSQL raw tables:
 ```bash
-python pipeline.py --skip-ingest
+python pipeline.py --skip-ingest --allow-dq-exceptions
 ```
 
 ### Only Regenerate Visualizations & PDF Report
 ```bash
 python pipeline.py --only-report
 ```
-
-### Strict Data Quality Mode (Assignment Alarm Mode)
-In compliance with the assignment requirement that the pipeline stop with an error when a check fails, the `--strict-dq` flag (or `STRICT_DQ=1` environment variable) causes any check with non-zero failing rows to halt the pipeline immediately with `DataQualityHardFailure`:
-```bash
-python pipeline.py --strict-dq
-```
-*Note: In strict mode, the pipeline halts during Stage 2 because `dq_03_payment_reconciliation` flags 260 empirical payment discrepancies present in the raw Kaggle data. Standard mode documents these exceptions in `analytics.dq_audit` and report Page 2 while allowing downstream analytics to proceed.*
 
 ---
 

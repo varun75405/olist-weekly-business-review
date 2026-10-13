@@ -25,7 +25,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger("pipeline")
 
-def run_pipeline(skip_ingest=False, skip_checks=False, only_report=False, strict_dq=False):
+def run_pipeline(skip_ingest=False, skip_checks=False, only_report=False, strict_dq=None):
+    import os
+    if strict_dq is None:
+        strict_dq = os.getenv("STRICT_DQ", "1").lower() not in ("0", "false", "no")
     start_time = time.time()
     logger.info("=" * 65)
     logger.info("  Olist Weekly Business Review — Production Pipeline")
@@ -103,12 +106,15 @@ if __name__ == "__main__":
                         help="Skip DQ checks")
     parser.add_argument("--only-report", action="store_true",
                         help="Only regenerate charts and PDF report")
-    parser.add_argument("--strict-dq", action="store_true",
-                        help="Strict DQ mode: halt pipeline if ANY DQ check has failing rows (e.g. assignment alarm)")
+    parser.add_argument("--allow-dq-exceptions", action="store_true",
+                        help="Allow documented business-anomaly DQ exceptions (e.g. 260 payment discrepancies) to proceed to downstream report generation")
     args = parser.parse_args()
+    import os
+    env_strict = os.getenv("STRICT_DQ", "1").lower() not in ("0", "false", "no")
+    strict_dq = env_strict and (not args.allow_dq_exceptions)
     run_pipeline(
         skip_ingest=args.skip_ingest,
         skip_checks=args.skip_checks,
         only_report=args.only_report,
-        strict_dq=args.strict_dq
+        strict_dq=strict_dq
     )
